@@ -533,7 +533,7 @@ tests.push ({
             50,
             test.nuggetsTokenWrapper.allowance (test.bob.address, test.dave.address));
       }},
-    { name: "Bob allows Dave to transfer 70 of his tokens",
+    { name: "Bob tries to allow Dave to transfer 70 of his tokens assuming that current allowance is 49, which is wrong",
       body: function (test) {
         assertBNEquals (
             'test.nuggetsTokenWrapper.allowance (test.bob.address, test.dave.address)',
@@ -543,8 +543,56 @@ tests.push ({
         personal.unlockAccount (test.alice, "");
         test.tx = test.bob.execute (
           test.nuggetsTokenWrapper.address,
-          test.nuggetsTokenWrapper.approve['address,uint256'].getData (
-            test.dave.address, 70),
+          test.nuggetsTokenWrapper.approve['address,uint256,uint256'].getData (
+            test.dave.address, 49, 70),
+          0,
+          {from: test.alice, gas:1000000});
+      }},
+    { name: "Make sure transaction succeeded but allowance was not changed",
+      precondition: function (test) {
+        miner.start ();
+        return web3.eth.getTransactionReceipt (test.tx);
+      },
+      body: function (test) {
+        miner.stop ();
+
+        assertEvents (
+          "test.bob.Result",
+          test.bob,
+          test.bob.Result,
+          test.tx,
+          { _value: true });
+
+        assertEvents (
+          "test.nuggetsTokenWrapper.Result",
+          test.nuggetsTokenWrapper,
+          test.nuggetsTokenWrapper.Result,
+          test.tx,
+          { _value: false });
+
+        assertEvents (
+          "test.nuggetsTokenWrapper.Approval",
+          test.nuggetsTokenWrapper,
+          test.nuggetsTokenWrapper.Approval,
+          test.tx);
+
+        assertBNEquals (
+            'test.nuggetsTokenWrapper.allowance (test.bob.address, test.dave.address)',
+            50,
+            test.nuggetsTokenWrapper.allowance (test.bob.address, test.dave.address));
+      }},
+    { name: "Bob allows Dave to transfer 70 of his tokens assuming that current allowance is 50",
+      body: function (test) {
+        assertBNEquals (
+            'test.nuggetsTokenWrapper.allowance (test.bob.address, test.dave.address)',
+            50,
+            test.nuggetsTokenWrapper.allowance (test.bob.address, test.dave.address));
+
+        personal.unlockAccount (test.alice, "");
+        test.tx = test.bob.execute (
+          test.nuggetsTokenWrapper.address,
+          test.nuggetsTokenWrapper.approve['address,uint256,uint256'].getData (
+            test.dave.address, 50, 70),
           0,
           {from: test.alice, gas:1000000});
       }},
@@ -560,6 +608,13 @@ tests.push ({
           "test.bob.Result",
           test.bob,
           test.bob.Result,
+          test.tx,
+          { _value: true });
+
+        assertEvents (
+          "test.nuggetsTokenWrapper.Result",
+          test.nuggetsTokenWrapper,
+          test.nuggetsTokenWrapper.Result,
           test.tx,
           { _value: true });
 
